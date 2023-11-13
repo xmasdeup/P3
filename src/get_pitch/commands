@@ -1,0 +1,4 @@
+make all/release/debug depenent preferencies 
+make clean
+
+PATH=$PATH:~/PAV/bin en el bashrc ultima linea
