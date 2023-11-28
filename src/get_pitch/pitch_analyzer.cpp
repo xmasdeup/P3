@@ -30,7 +30,7 @@ namespace upc {
 
   void PitchAnalyzer::amdf(const vector<float> &x, vector<float> &distance) const{
       
-      for (unsigned int lag = 0; lag < distance.size() ;++lag)
+      for (unsigned int lag = 1; lag < distance.size() ;++lag)
       {
         distance[lag] = 0;
 

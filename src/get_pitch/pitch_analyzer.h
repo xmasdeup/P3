@@ -37,7 +37,7 @@ namespace upc {
     void autocorrelation(const std::vector<float> &x, std::vector<float> &r) const;
 
   ///
-  /// Computes the average maximum distance from lag=0 to MAX_F0 or npitch_max
+  /// Computes the average maximum distance from lag=1 to MAX_F0 or npitch_max
   ///
     void amdf(const std::vector<float> &x, std::vector<float> &distance) const;
 
