@@ -3,6 +3,8 @@
 #include <iostream>
 #include <math.h>
 #include "pitch_analyzer.h"
+#include <vector>
+#include <complex>
 
 using namespace std;
 
@@ -27,6 +29,60 @@ namespace upc {
     if (r[0] == 0.0F) //to avoid log() and divide zero 
       r[0] = 1e-10; 
   }
+  // Función para calcular la FFT recursivamente
+void calcularFFT(std::vector<std::complex<double>>& x) {
+    const int N = x.size();
+    if (N <= 1) return;
+
+    std::vector<std::complex<double>> even(N/2), odd(N/2);
+    for (int i = 0; i < N/2; ++i) {
+        even[i] = x[2*i];
+        odd[i] = x[2*i + 1];
+    }
+
+    calcularFFT(even);
+    calcularFFT(odd);
+
+    for (int k = 0; k < N/2; ++k) {
+        std::complex<double> t = std::polar(1.0, -2 * M_PI * k / N) * odd[k];
+        x[k] = even[k] + t;
+        x[k + N/2] = even[k] - t;
+    }
+}
+
+// Función para calcular el cepstrum
+std::vector<double> calcularCepstrum(const std::vector<double>& signal) {
+    int N = signal.size();
+
+    // Transformada de Fourier de la señal
+    std::vector<std::complex<double>> fftSignal(N);
+    for (int i = 0; i < N; ++i) {
+        fftSignal[i] = { signal[i], 0.0 }; // Se llena con valores complejos (la parte imaginaria es cero)
+    }
+    
+    calcularFFT(fftSignal);
+
+    // Calculando el logaritmo del espectro
+    std::vector<double> logMagnitude(N);
+    for (int i = 0; i < N; ++i) {
+        logMagnitude[i] = std::log(std::abs(fftSignal[i]));
+    }
+
+    // Transformada inversa de Fourier del logaritmo del espectro
+    std::vector<std::complex<double>> ifftLogMagnitude(N);
+    std::copy(logMagnitude.begin(), logMagnitude.end(), ifftLogMagnitude.begin());
+    calcularFFT(ifftLogMagnitude); // FFT inversa
+
+    // Extrayendo el cepstrum (parte real de la IFFT del logaritmo del espectro)
+    std::vector<double> cepstrum(N);
+    for (int i = 0; i < N; ++i) {
+        cepstrum[i] = ifftLogMagnitude[i].real();
+    }
+
+    return cepstrum;
+}
+
+
 
   void PitchAnalyzer::amdf(const vector<float> &x, vector<float> &distance) const{
       
