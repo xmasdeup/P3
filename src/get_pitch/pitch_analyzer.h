@@ -7,8 +7,8 @@
 #include <algorithm>
 
 namespace upc {
-  const float MIN_F0 = 20.0F;    ///< Minimum value of pitch in Hertzs
-  const float MAX_F0 = 10000.0F; ///< Maximum value of pitch in Hertzs
+  const float MIN_F0 = 50.0F;    ///< Minimum value of pitch in Hertzs
+  const float MAX_F0 = 600.0F; ///< Maximum value of pitch in Hertzs
 
   ///
   /// PitchAnalyzer: class that computes the pitch (in Hz) from a signal frame.
@@ -35,6 +35,11 @@ namespace upc {
 	/// Computes correlation from lag=0 to r.size()
 	///
     void autocorrelation(const std::vector<float> &x, std::vector<float> &r) const;
+
+  ///
+  /// Computes the average maximum distance from lag=0 to MAX_F0 or npitch_max
+  ///
+    void amdf(const std::vector<float> &x, std::vector<float> &distance) const;
 
 	///
 	/// Returns the pitch (in Hz) of input frame x

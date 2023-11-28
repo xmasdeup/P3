@@ -28,6 +28,20 @@ namespace upc {
       r[0] = 1e-10; 
   }
 
+  void PitchAnalyzer::amdf(const vector<float> &x, vector<float> &distance) const{
+      
+      for (unsigned int lag = 0; lag < distance.size() ;++lag)
+      {
+        distance[lag] = 0;
+
+        for(unsigned int n = 0; n < (x.size() -lag); ++n)
+        {
+          distance[lag] += abs(x[n]-x[n+lag]);
+        }
+        distance[lag] = distance[lag]/(x.size()-lag);
+      }
+  }
+
   void PitchAnalyzer::set_window(Window win_type) {
     if (frameLen == 0)
       return;
@@ -76,6 +90,7 @@ namespace upc {
       x[i] *= window[i];
 
     vector<float> r(npitch_max);
+    vector<float> distance(npitch_max);
 
     //Compute correlation
     autocorrelation(x, r);

@@ -54,7 +54,7 @@ int main(int argc, const char *argv[]) {
     cerr << "Error reading input file " << input_wav << " (" << strerror(errno) << ")\n";
     return -2;
   }
-
+  // HACER NORMALIZACION DE X
   int n_len = rate * FRAME_LEN;
   int n_shift = rate * FRAME_SHIFT;
 
