@@ -4,7 +4,7 @@ project(
     version: 'v2.0'
 )
 
-inc = include_directories(['src/include', 'src/pav/docopt_cpp'])
+inc = include_directories(['src/include', 'src/pav/docopt_cpp','src/include/ffft',])
 
 # Librería PAV
 subdir('src/pav')

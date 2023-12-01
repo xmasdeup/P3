@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-        def.h
+        FFTRealSelect.hpp
         By Laurent de Soras
 
 --- Legal stuff ---
@@ -15,17 +15,13 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 
 
-#if ! defined (ffft_def_HEADER_INCLUDED)
-#define	ffft_def_HEADER_INCLUDED
-
-#if defined (_MSC_VER)
-	#pragma once
-	#pragma warning (4 : 4250) // "Inherits via dominance."
+#if defined (ffft_FFTRealSelect_CURRENT_CODEHEADER)
+	#error Recursive inclusion of FFTRealSelect code header.
 #endif
+#define	ffft_FFTRealSelect_CURRENT_CODEHEADER
 
-
-
-/*\\\ INCLUDE FILES \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
+#if ! defined (ffft_FFTRealSelect_CODEHEADER_INCLUDED)
+#define	ffft_FFTRealSelect_CODEHEADER_INCLUDED
 
 
 
@@ -34,18 +30,23 @@ namespace ffft
 
 
 
-const double	PI		= 3.1415926535897932384626433832795;
-const double	SQRT2	= 1.41421356237309514547462185873883;
+/*\\\ PUBLIC \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
-#if defined (_MSC_VER)
 
-	#define	ffft_FORCEINLINE	__forceinline
 
-#else
+template <int P>
+float *	FFTRealSelect <P>::sel_bin (float *e_ptr, float *o_ptr)
+{
+	return (o_ptr);
+}
 
-	#define	ffft_FORCEINLINE	inline
 
-#endif
+
+template <>
+inline float *	FFTRealSelect <0>::sel_bin (float *e_ptr, float *o_ptr)
+{
+	return (e_ptr);
+}
 
 
 
@@ -53,7 +54,9 @@ const double	SQRT2	= 1.41421356237309514547462185873883;
 
 
 
-#endif	// ffft_def_HEADER_INCLUDED
+#endif	// ffft_FFTRealSelect_CODEHEADER_INCLUDED
+
+#undef ffft_FFTRealSelect_CURRENT_CODEHEADER
 
 
 

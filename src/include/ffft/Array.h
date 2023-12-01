@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-        DynArray.h
+        Array.h
         By Laurent de Soras
 
 --- Legal stuff ---
@@ -15,8 +15,8 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 
 
-#if ! defined (ffft_DynArray_HEADER_INCLUDED)
-#define	ffft_DynArray_HEADER_INCLUDED
+#if ! defined (ffft_Array_HEADER_INCLUDED)
+#define	ffft_Array_HEADER_INCLUDED
 
 #if defined (_MSC_VER)
 	#pragma once
@@ -34,8 +34,8 @@ namespace ffft
 
 
 
-template <class T>
-class DynArray
+template <class T, long LEN>
+class Array
 {
 
 /*\\\ PUBLIC \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
@@ -44,17 +44,15 @@ public:
 
 	typedef	T	DataType;
 
-						DynArray ();
-	explicit			DynArray (long size);
-						~DynArray ();
-
-	inline long		size () const;
-	inline void		resize (long size);
+						Array ();
 
 	inline const DataType &
 						operator [] (long pos) const;
 	inline DataType &
 						operator [] (long pos);
+
+	static inline long
+						size ();
 
 
 
@@ -68,8 +66,7 @@ protected:
 
 private:
 
-	DataType *		_data_ptr;
-	long				_len;
+	DataType			_data_arr [LEN];
 
 
 
@@ -77,12 +74,12 @@ private:
 
 private:
 
-						DynArray (const DynArray &other);
-	DynArray &		operator = (const DynArray &other);
-	bool				operator == (const DynArray &other);
-	bool				operator != (const DynArray &other);
+						Array (const Array &other);
+	Array &			operator = (const Array &other);
+	bool				operator == (const Array &other);
+	bool				operator != (const Array &other);
 
-};	// class DynArray
+};	// class Array
 
 
 
@@ -90,11 +87,11 @@ private:
 
 
 
-#include	"ffft/DynArray.hpp"
+#include	"ffft/Array.hpp"
 
 
 
-#endif	// ffft_DynArray_HEADER_INCLUDED
+#endif	// ffft_Array_HEADER_INCLUDED
 
 
 

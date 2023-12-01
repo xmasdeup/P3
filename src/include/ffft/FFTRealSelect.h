@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-        DynArray.h
+        FFTRealSelect.h
         By Laurent de Soras
 
 --- Legal stuff ---
@@ -15,17 +15,18 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 
 
-#if ! defined (ffft_DynArray_HEADER_INCLUDED)
-#define	ffft_DynArray_HEADER_INCLUDED
+#if ! defined (ffft_FFTRealSelect_HEADER_INCLUDED)
+#define	ffft_FFTRealSelect_HEADER_INCLUDED
 
 #if defined (_MSC_VER)
 	#pragma once
-	#pragma warning (4 : 4250) // "Inherits via dominance."
 #endif
 
 
 
 /*\\\ INCLUDE FILES \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
+
+#include	"ffft/def.h"
 
 
 
@@ -34,42 +35,16 @@ namespace ffft
 
 
 
-template <class T>
-class DynArray
+template <int P>
+class FFTRealSelect
 {
 
 /*\\\ PUBLIC \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
 public:
 
-	typedef	T	DataType;
-
-						DynArray ();
-	explicit			DynArray (long size);
-						~DynArray ();
-
-	inline long		size () const;
-	inline void		resize (long size);
-
-	inline const DataType &
-						operator [] (long pos) const;
-	inline DataType &
-						operator [] (long pos);
-
-
-
-/*\\\ PROTECTED \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
-
-protected:
-
-
-
-/*\\\ PRIVATE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
-
-private:
-
-	DataType *		_data_ptr;
-	long				_len;
+	ffft_FORCEINLINE static float *
+						sel_bin (float *e_ptr, float *o_ptr);
 
 
 
@@ -77,12 +52,14 @@ private:
 
 private:
 
-						DynArray (const DynArray &other);
-	DynArray &		operator = (const DynArray &other);
-	bool				operator == (const DynArray &other);
-	bool				operator != (const DynArray &other);
+						FFTRealSelect ();
+						~FFTRealSelect ();
+						FFTRealSelect (const FFTRealSelect &other);
+	FFTRealSelect&	operator = (const FFTRealSelect &other);
+	bool				operator == (const FFTRealSelect &other);
+	bool				operator != (const FFTRealSelect &other);
 
-};	// class DynArray
+};	// class FFTRealSelect
 
 
 
@@ -90,11 +67,11 @@ private:
 
 
 
-#include	"ffft/DynArray.hpp"
+#include	"ffft/FFTRealSelect.hpp"
 
 
 
-#endif	// ffft_DynArray_HEADER_INCLUDED
+#endif	// ffft_FFTRealSelect_HEADER_INCLUDED
 
 
 

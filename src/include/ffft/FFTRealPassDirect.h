@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-        DynArray.h
+        FFTRealPassDirect.h
         By Laurent de Soras
 
 --- Legal stuff ---
@@ -15,8 +15,8 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 
 
-#if ! defined (ffft_DynArray_HEADER_INCLUDED)
-#define	ffft_DynArray_HEADER_INCLUDED
+#if ! defined (ffft_FFTRealPassDirect_HEADER_INCLUDED)
+#define	ffft_FFTRealPassDirect_HEADER_INCLUDED
 
 #if defined (_MSC_VER)
 	#pragma once
@@ -27,6 +27,10 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 /*\\\ INCLUDE FILES \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
+#include	"ffft/def.h"
+#include	"ffft/FFTRealFixLenParam.h"
+#include	"ffft/OscSinCos.h"
+
 
 
 namespace ffft
@@ -34,27 +38,19 @@ namespace ffft
 
 
 
-template <class T>
-class DynArray
+template <int PASS>
+class FFTRealPassDirect
 {
 
 /*\\\ PUBLIC \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
 public:
 
-	typedef	T	DataType;
+   typedef	FFTRealFixLenParam::DataType	DataType;
+	typedef	OscSinCos <DataType>	OscType;
 
-						DynArray ();
-	explicit			DynArray (long size);
-						~DynArray ();
-
-	inline long		size () const;
-	inline void		resize (long size);
-
-	inline const DataType &
-						operator [] (long pos) const;
-	inline DataType &
-						operator [] (long pos);
+	ffft_FORCEINLINE static void
+						process (long len, DataType dest_ptr [], DataType src_ptr [], const DataType x_ptr [], const DataType cos_ptr [], long cos_len, const long br_ptr [], OscType osc_list []);
 
 
 
@@ -68,21 +64,20 @@ protected:
 
 private:
 
-	DataType *		_data_ptr;
-	long				_len;
-
 
 
 /*\\\ FORBIDDEN MEMBER FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
 private:
 
-						DynArray (const DynArray &other);
-	DynArray &		operator = (const DynArray &other);
-	bool				operator == (const DynArray &other);
-	bool				operator != (const DynArray &other);
+						FFTRealPassDirect ();
+						FFTRealPassDirect (const FFTRealPassDirect &other);
+	FFTRealPassDirect &
+						operator = (const FFTRealPassDirect &other);
+	bool				operator == (const FFTRealPassDirect &other);
+	bool				operator != (const FFTRealPassDirect &other);
 
-};	// class DynArray
+};	// class FFTRealPassDirect
 
 
 
@@ -90,11 +85,11 @@ private:
 
 
 
-#include	"ffft/DynArray.hpp"
+#include	"ffft/FFTRealPassDirect.hpp"
 
 
 
-#endif	// ffft_DynArray_HEADER_INCLUDED
+#endif	// ffft_FFTRealPassDirect_HEADER_INCLUDED
 
 
 

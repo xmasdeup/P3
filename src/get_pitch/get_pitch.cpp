@@ -7,6 +7,7 @@
 
 #include "wavfile_mono.h"
 #include "pitch_analyzer.h"
+#include "FFTReal.h"
 
 #include "docopt.h"
 
@@ -15,6 +16,7 @@
 
 using namespace std;
 using namespace upc;
+using namespace ffft;
 
 static const char USAGE[] = R"(
 get_pitch - Pitch Estimator 
@@ -57,9 +59,33 @@ int main(int argc, const char *argv[]) {
   // HACER NORMALIZACION DE X
   int n_len = rate * FRAME_LEN;
   int n_shift = rate * FRAME_SHIFT;
+  int order = 4;
+  int cutoffFrequency = 1100;
+  int DFTsamples = 1024;
 
   // Define analyzer
   PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 50, 500);
+  ButterWorthFilter butter(order,cutoffFrequency,rate);
+  FFTReal <vector<float>> fft_thingy(DFTsamples);
+  vector<float>::iterator iF;
+
+  std::vector<float>spectrum;  
+
+  for (iF = x.begin(); iF + DFTsamples < x.end(); iF = iF + DFTsamples) {
+    
+    std::vector<float> dft(DFTsamples); //local copy of input frame, size N
+    std::copy(iF, iF+DFTsamples, dft.begin()); //copy input values into local vector x
+    
+    fft_thingy.do_fft(&spectrum,&x);
+
+    butter.applyFilter(spectrum);
+
+    fft_thingy.do_ifft(&spectrum,&x);
+
+    butter.center_clipping(x);
+
+  }
+
 
   /// \TODO
   /// Preprocess the input signal in order to ease pitch estimation. For instance,

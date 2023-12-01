@@ -1,6 +1,6 @@
 /*****************************************************************************
 
-        DynArray.h
+        FFTRealUseTrigo.h
         By Laurent de Soras
 
 --- Legal stuff ---
@@ -15,8 +15,8 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 
 
-#if ! defined (ffft_DynArray_HEADER_INCLUDED)
-#define	ffft_DynArray_HEADER_INCLUDED
+#if ! defined (ffft_FFTRealUseTrigo_HEADER_INCLUDED)
+#define	ffft_FFTRealUseTrigo_HEADER_INCLUDED
 
 #if defined (_MSC_VER)
 	#pragma once
@@ -27,6 +27,10 @@ http://sam.zoy.org/wtfpl/COPYING for more details.
 
 /*\\\ INCLUDE FILES \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
+#include	"ffft/def.h"
+#include	"ffft/FFTRealFixLenParam.h"
+#include	"ffft/OscSinCos.h"
+
 
 
 namespace ffft
@@ -34,27 +38,21 @@ namespace ffft
 
 
 
-template <class T>
-class DynArray
+template <int ALGO>
+class FFTRealUseTrigo
 {
 
 /*\\\ PUBLIC \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
 public:
 
-	typedef	T	DataType;
+   typedef	FFTRealFixLenParam::DataType	DataType;
+	typedef	OscSinCos <DataType>	OscType;
 
-						DynArray ();
-	explicit			DynArray (long size);
-						~DynArray ();
-
-	inline long		size () const;
-	inline void		resize (long size);
-
-	inline const DataType &
-						operator [] (long pos) const;
-	inline DataType &
-						operator [] (long pos);
+	ffft_FORCEINLINE static void
+						prepare (OscType &osc);
+	ffft_FORCEINLINE	static void
+						iterate (OscType &osc, DataType &c, DataType &s, const DataType cos_ptr [], long index_c, long index_s);
 
 
 
@@ -68,21 +66,21 @@ protected:
 
 private:
 
-	DataType *		_data_ptr;
-	long				_len;
-
 
 
 /*\\\ FORBIDDEN MEMBER FUNCTIONS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*/
 
 private:
 
-						DynArray (const DynArray &other);
-	DynArray &		operator = (const DynArray &other);
-	bool				operator == (const DynArray &other);
-	bool				operator != (const DynArray &other);
+						FFTRealUseTrigo ();
+						~FFTRealUseTrigo ();
+						FFTRealUseTrigo (const FFTRealUseTrigo &other);
+	FFTRealUseTrigo &
+						operator = (const FFTRealUseTrigo &other);
+	bool				operator == (const FFTRealUseTrigo &other);
+	bool				operator != (const FFTRealUseTrigo &other);
 
-};	// class DynArray
+};	// class FFTRealUseTrigo
 
 
 
@@ -90,11 +88,11 @@ private:
 
 
 
-#include	"ffft/DynArray.hpp"
+#include	"ffft/FFTRealUseTrigo.hpp"
 
 
 
-#endif	// ffft_DynArray_HEADER_INCLUDED
+#endif	// ffft_FFTRealUseTrigo_HEADER_INCLUDED
 
 
 

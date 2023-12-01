@@ -5,15 +5,41 @@
 
 #include <vector>
 #include <algorithm>
+#include <complex>
 
 namespace upc {
   const float MIN_F0 = 50.0F;    ///< Minimum value of pitch in Hertzs
-  const float MAX_F0 = 600.0F; ///< Maximum value of pitch in Hertzs
+  const float MAX_F0 = 500.0F; ///< Maximum value of pitch in Hertzs
 
   ///
   /// PitchAnalyzer: class that computes the pitch (in Hz) from a signal frame.
   /// No pre-processing or post-processing has been included
   ///
+
+  class ButterWorthFilter {
+  private:
+    int32_t order;
+    double_t cutoffFrequency;
+    double_t samplingFrequency;
+    double_t gain;
+    std::vector<std::complex<double>> poles;
+
+  public: 
+    ButterWorthFilter(int32_t order, double_t cutoffFrequency, double_t samplingFrequency);
+
+  
+  ///
+  /// Applies the ButterWorthFilter
+  ///
+    void applyFilter(std::vector<float> &spectrum);
+
+  ///
+  /// Returns the signal center clipped
+  ///
+    void center_clipping(std::vector<float> &signal) const;
+
+  };
+
   class PitchAnalyzer {
   public:
 	/// Wndow type
@@ -40,6 +66,23 @@ namespace upc {
   /// Computes the average maximum distance from lag=1 to MAX_F0 or npitch_max
   ///
     void amdf(const std::vector<float> &x, std::vector<float> &distance) const;
+
+  ///
+  /// Computes the fft of the signal
+  ///
+    void calcularFFT(std::vector<std::complex<double>> &x, bool inverse) const;
+
+
+  ///
+  /// Computes the cepstrum of the signal
+  ///
+    void calcularCepstrum(const std::vector<float> &signal, std::vector<float> &cepstrum) const;
+
+  ///
+  /// Computes the crossing rate of the signal
+  ///
+    std::float_t compute_zcr(const std::vector<float> &x) const;
+
 
 	///
 	/// Returns the pitch (in Hz) of input frame x
