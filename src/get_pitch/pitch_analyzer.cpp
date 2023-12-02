@@ -56,7 +56,7 @@ namespace upc {
 
     for(int i = 0; i<(size_fft/2); i++)
     {
-      log_fourier[i] = pow(normal_fourier[i],2) + pow(normal_fourier[i+size_fft/2],2);
+      log_fourier[i] = log( pow(normal_fourier[i],2) + pow(normal_fourier[i+size_fft/2],2));
     }
 
     fft_second.do_fft(out_cepstrum,log_fourier);
