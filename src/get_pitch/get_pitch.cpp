@@ -8,6 +8,9 @@
 #include "wavfile_mono.h"
 #include "pitch_analyzer.h"
 #include "FFTReal.h"
+#include	"def.h"
+#include	"DynArray.h"
+#include	"OscSinCos.h"
 
 #include "docopt.h"
 
@@ -61,30 +64,76 @@ int main(int argc, const char *argv[]) {
   int n_shift = rate * FRAME_SHIFT;
   int order = 4;
   int cutoffFrequency = 1100;
-  int DFTsamples = 1024;
+  int16_t DFTsamples = 1024;
+  int16_t f_inc = round(rate/DFTsamples);
+  int size_fft = 0;
+
+  for(int size_f = 1; size_f < n_len; size_f *=2) size_fft = size_f;
+
 
   // Define analyzer
-  PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 50, 500);
-  ButterWorthFilter butter(order,cutoffFrequency,rate);
-  FFTReal <vector<float>> fft_thingy(DFTsamples);
-  vector<float>::iterator iF;
+  PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 100, 550);
+  ButterWorthFilter butter(DFTsamples/2);
+  FFTReal <float> fft_caller(DFTsamples);
 
-  std::vector<float>spectrum;  
+  FFTReal <float> fft_first(size_fft);
+  FFTReal <float> fft_second(size_fft/2);
+  
+  vector<float>::iterator iF;
+  float filter[DFTsamples];
+  float spectrum[DFTsamples];  
+
+  for(int i = 1; i < DFTsamples/2; i++){
+
+    float_t freq = i * f_inc;
+    double denum = 1 + 0.31*pow(freq/cutoffFrequency,2*order);
+    filter[i] = 1.0/sqrt(denum);
+
+  }
+    filter[0] = 1;
+    // for(int i = 0; i<DFTsamples/2; i++)
+    //  {
+    //    cout<<i<<": ";
+    //    cout<<filter[i]<<"\n";
+    //  }
 
   for (iF = x.begin(); iF + DFTsamples < x.end(); iF = iF + DFTsamples) {
     
-    std::vector<float> dft(DFTsamples); //local copy of input frame, size N
-    std::copy(iF, iF+DFTsamples, dft.begin()); //copy input values into local vector x
+    float dft[DFTsamples]; //local copy of input frame, size N
+    float sum = 0;
+
+    for(uint16_t i = 0; i< DFTsamples; i++)
+    {
+      dft[i] = *(iF +i); 
+      // cout<<i<<": ";
+      // cout<<dft[i]<<"\n";
+      sum += dft[i];
+    }
     
-    fft_thingy.do_fft(&spectrum,&x);
+    fft_caller.do_fft(spectrum,dft);
 
-    butter.applyFilter(spectrum);
+    butter.applyFilter(spectrum,filter);
 
-    fft_thingy.do_ifft(&spectrum,&x);
+    //  for(int i = 0; i<DFTsamples; i++)
+    //  {
+    //    cout<<i<<": ";
+    //    cout<<spectrum[i]<<"\n";
+    //  }
 
-    butter.center_clipping(x);
+    fft_caller.do_ifft(spectrum,dft);
 
+    fft_caller.rescale(dft);
+
+    for(uint16_t i = 0; i<DFTsamples; i++)
+    {
+      *(iF+i) = dft[i];
+      //cout<<(dft[i])<<"\n";
+
+    }
+    //cout<<"END OF FRAME\n\n\n\n\n";
   }
+  
+  butter.center_clipping(x,rate);
 
 
   /// \TODO
@@ -95,7 +144,7 @@ int main(int argc, const char *argv[]) {
   vector<float>::iterator iX;
   vector<float> f0;
   for (iX = x.begin(); iX + n_len < x.end(); iX = iX + n_shift) {
-    float f = analyzer(iX, iX + n_len);
+    float f = analyzer(iX, iX + n_len, fft_first, fft_second);
     f0.push_back(f);
   }
 

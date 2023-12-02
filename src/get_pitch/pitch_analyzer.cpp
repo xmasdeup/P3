@@ -5,8 +5,10 @@
 #include "pitch_analyzer.h"
 #include <vector>
 #include <complex>
+#include "FFTReal.h"
 
 using namespace std;
+using namespace ffft;
 
 /// Name space of UPC
 namespace upc {
@@ -29,93 +31,70 @@ namespace upc {
     if (r[0] == 0.0F) //to avoid log() and divide zero 
       r[0] = 1e-10; 
   }
-  
-  // Función para calcular la FFT recursivamente
-  void PitchAnalyzer::calcularFFT(std::vector<std::complex<double>> &x, bool inverse) const{
-    const int N = x.size();
-    double exponent = 0;
-    if (N <= 1) return;
 
-    std::vector<std::complex<double>> even(N/2), odd(N/2);
-    for (int i = 0; i < N/2; ++i) {
-        even[i] = x[2*i];
-        odd[i] = x[2*i + 1];
-    }
-
-    calcularFFT(even,inverse);
-    calcularFFT(odd,inverse);
-    if(inverse == false)  exponent =  -2 * M_PI / N;
-    else if(inverse == true) exponent =  2 * M_PI / N;
-
-    for (int k = 0; k < N/2; ++k) {
-        std::complex<double> t = std::polar(1.0,k*exponent) * odd[k];
-        x[k] = even[k] + t;
-        x[k + N/2] = even[k] - t;
-    }
-  }
-
-  // Función para calcular el cepstrum
-  void PitchAnalyzer::calcularCepstrum(const std::vector<float> &signal, std::vector<float> &cepstrum) const {
-    int N = cepstrum.size();
-    // Transformada de Fourier de la señal
-    std::vector<std::complex<double>> fftSignal(N);
-
-    for (int i = 0; i < N; ++i) {
-        fftSignal[i] = { signal[i], 0.0 }; // Se llena con valores complejos (la parte imaginaria es cero)
-    }
-    
-    calcularFFT(fftSignal,false);
-
-    // Calculando el logaritmo del espectro
-    std::vector<double> logMagnitude(N);
-    for (int i = 0; i < N; ++i) {
-        logMagnitude[i] = std::log(std::abs(fftSignal[i]));
-    }
-
-    // Transformada inversa de Fourier del logaritmo del espectro
-    std::vector<std::complex<double>> ifftLogMagnitude(N);
-
-    std::copy(logMagnitude.begin(), logMagnitude.end(), ifftLogMagnitude.begin());
-    calcularFFT(ifftLogMagnitude, true); // FFT inversa
-    float_t maxIndex = 0;
-    int index = 0;
-    // Extrayendo el cepstrum (parte real de la IFFT del logaritmo del espectro)
-    for (int i = 0; i < N; ++i) {
-        cepstrum[i] = ifftLogMagnitude[i].real();
-        if(maxIndex<cepstrum[i]) 
-        {
-          maxIndex = cepstrum[i];
-          index = i;
-        }
-    }
-    // std::cout<<maxIndex<<" \t";
-    // std::cout<<index<<" \n";
-  }
-
-  std::float_t PitchAnalyzer::compute_zcr(const std::vector<float> &x) const
+  void PitchAnalyzer::calcularCepstrum(const std::vector<float> &signal, std::vector<float> &cepstrum, int size_fft, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const
   {
-    std::float_t count = 0;
+    int N = cepstrum.size();
+
+    float in_fourier[size_fft];
+    float normal_fourier[size_fft];
+    float log_fourier[size_fft/2];
+    float out_cepstrum[size_fft/2];
+
+    for(int i = 0; i < size_fft; i++)
+    {
+      in_fourier[i] = 0;
+
+      if(i < N)
+      {
+        in_fourier[i] = signal[i];
+      }
+
+    }
+
+    fft_first.do_fft(normal_fourier, in_fourier);
+
+    for(int i = 0; i<(size_fft/2); i++)
+    {
+      log_fourier[i] = pow(normal_fourier[i],2) + pow(normal_fourier[i+size_fft/2],2);
+    }
+
+    fft_second.do_fft(out_cepstrum,log_fourier);
+
+    for(int i = 0; i<(size_fft/4); i++)
+    {
+      cepstrum[i] = pow(out_cepstrum[i],2) + pow(out_cepstrum[i+size_fft/4],2);
+      cout<<cepstrum[i]<<"\n";
+    }
+
+  }
+
+
+
+  int PitchAnalyzer::compute_zcr(const std::vector<float> &x) const
+  {
+    int count = 0;
 
     for(uint64_t i = 1; i < x.size(); i++)
     {
-        if(x[i]<x[i-1])
+        if(signbit(x[i]*x[i-1]))
         {
           count++;
         }
     }
-
+    //cout<<count<<"\n";
     return count;
   }
 
-  void PitchAnalyzer::amdf(const vector<float> &x, vector<float> &distance) const{
+  unsigned int PitchAnalyzer::amdf(const vector<float> &x, vector<float> &distance) const{
       
-      float_t minIndex = 99999;
+      float_t minIndex = 1000;
       float_t mean = 0;
-      int index = 0;
-      std::cout<<x.size()<<"\n";
-      for (unsigned int lag = npitch_min; lag < distance.size() ;lag++)
+      unsigned int index = 0;
+      //std::cout<<x.size()<<"\n";
+      for (unsigned int lag = npitch_min-10; lag <= distance.size() ;lag++)
       {
-        distance[lag] = 0;
+          distance[lag] = 0;
 
         for(unsigned int n = 0; n < (x.size() -lag); ++n)
         {
@@ -133,13 +112,15 @@ namespace upc {
           minIndex = distance[lag];
           index = lag;
         }
-      
-      }
-      std::cout<<mean<<"\t";
-      std::cout<<minIndex<<" \t";
-      std::cout<<index<<" \n";
-      std::cout<<"End Of Frame\n";
 
+      }
+      if(minIndex < 1.5e-4) index = 0; 
+
+      // std::cout<<mean<<"\t";
+      // std::cout<<minIndex<<" \t";
+      // std::cout<<index<<" \n";
+      // std::cout<<"End Of Frame\n";
+    return index;
   }
 
   void PitchAnalyzer::set_window(Window win_type) {
@@ -175,20 +156,30 @@ namespace upc {
       npitch_max = frameLen/2;
   }
 
-  bool PitchAnalyzer::unvoiced(float pot, float r1norm, float rmaxnorm) const {
+  bool PitchAnalyzer::unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int min, float zcr) const {
     /// \TODO Implement a rule to decide whether the sound is voiced or not.
     /// * You can use the standard features (pot, r1norm, rmaxnorm),
     ///   or compute and use other ones.
-    if((pot< -40) || (rmaxnorm/r1norm < 0.35))
+    // if((pot< -40) || (rmaxnorm/r1norm < 0.35))
+    // {
+    //   return true;
+    // } 
+
+    if(((min>=npitch_min) && (min<=npitch_max)) && zcr < 60)
     {
-      return true;
-    } 
-    else return false;
+
+      return false;
+    }
+
+    else return true;
   }
 
-  float PitchAnalyzer::compute_pitch(vector<float> & x) const {
+  float PitchAnalyzer::compute_pitch(vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
     if (x.size() != frameLen)
       return -1.0F;
+  int size_fft = 0;
+
+  for(unsigned int size_f = 1; size_f < frameLen; size_f *= 2) size_fft = size_f;
 
     //Window input frame
     for (unsigned int i=0; i<x.size(); ++i)
@@ -196,12 +187,15 @@ namespace upc {
 
     vector<float> r(npitch_max);
     vector<float> distance(npitch_max);
-    vector<float> c(npitch_max);
+    vector<float> c(size_fft/4);
     
     //Compute correlation
+    int zcr = compute_zcr(x);
+
     autocorrelation(x, r);
-    calcularCepstrum(x, c);
-    amdf(x,distance);
+    calcularCepstrum(x, c, size_fft, fft_first, fft_second);
+    unsigned int min = amdf(x,distance);
+
     vector<float>::const_iterator iR = r.begin(), iRMax = iR;
     
     for(iR = iRMax = r.begin() + npitch_min; iR< r.begin() + npitch_max; iR++)
@@ -210,6 +204,7 @@ namespace upc {
       {
         iRMax = iR;
       }
+      // cout<<*iR<<"\n";
     }
 
     unsigned int lag = iRMax - r.begin();
@@ -222,8 +217,9 @@ namespace upc {
   ///	   .
 	/// In either case, the lag should not exceed that of the minimum value of the pitch.
 
-
-    float pot = 10 * log10(r[0]);
+    // cout<<npitch_max<<"\n";
+    // cout<<npitch_min<<"\n";
+    float pot = 10 * log10(1e-8*r[0]);
     //You can print these (and other) features, look at them using wavesurfer
     //Based on that, implement a rule for unvoiced
     //change to #if 1 and compile
@@ -232,81 +228,67 @@ namespace upc {
       cout << pot << '\t' << r[1]/r[0] << '\t' << r[lag]/r[0] << endl;
 #endif 
     
-    if (unvoiced(pot, r[1]/r[0], r[lag]/r[0]))
+    if (unvoiced(pot, r[1]/r[0], r[lag]/r[0], min, zcr))
       return 0;
     else
-      return (float) samplingFreq/(float) lag;
+      return (float) samplingFreq/(float) min;
   }
 
-  ButterWorthFilter::ButterWorthFilter(int32_t order, double_t cutoffFrequency, double_t samplingFrequency):
-      order(order), cutoffFrequency(cutoffFrequency), samplingFrequency(samplingFrequency) {
 
-        double_t wc = 2.0 * M_PI * cutoffFrequency;
-
-        poles.resize(order);
-
-        for(int32_t k = 0; k<order; ++k)
-        {
-          double_t theta = (2 * k + 1) * M_PI / (2.0*order);
-          double_t realPart = -sin(theta) * sinh(1.0/(2.0*order)*asinh(1.0));
-          double_t imagPart = cos(theta) * cosh(1.0/(2.0*order)*asinh(1.0)); 
-          poles[k] =  std::complex<double>(realPart,imagPart) * wc;
-        } 
-
-        for(int32_t k = 0; k<order;++k)
-        {
-          poles[k]= (2.0 * samplingFrequency + poles[k]) / (2.0 * samplingFrequency - poles[k]);
-        }
-
-        gain = 1.0;
-        for(int32_t k= 0; k< order;++k)
-        {
-          gain *= -poles[k].real();
-        }
-
-  }
-  void ButterWorthFilter::applyFilter(std::vector<float> &spectrum)
+  void ButterWorthFilter::applyFilter(float spectrum [], const float filter [])
   {
-    int N = spectrum.size() /2;
+    for(int i = 0; i< samples; i++)
+    {
+      spectrum[i] *= filter[i];
+      spectrum[i+samples] *= filter[i];
 
-    for(int32_t i = 0; i< N ;++i) {
-
-      double_t freq = static_cast<double>(i) * samplingFrequency/N;
-
-      std::complex<double> H = 1.0;
-
-      for(int32_t k = 0; k<order;++k)
-      {
-        double poleReal = poles[k].real();
-        double poleImag = poles[k].imag();
-        std::complex<double> term = 1.0 - exp(-2.0 * M_PI * freq / samplingFrequency * std::complex<double>(poleReal,poleImag));
-        H /= term;
-      }
-      H /= gain;
-
-      spectrum[i] *= H.real();
-      spectrum[N+i] *= H.imag();
     }
   }
 
-  void ButterWorthFilter::center_clipping(std::vector<float> &signal) const
+
+  void ButterWorthFilter::center_clipping(std::vector<float> &signal, int rate) const
   {
+    float_t interval = rate/20;
+    vector<float>::iterator iX;
     float_t maximum = 0;
-    for(int32_t i = 0; i<signal.size();++i)
+    float_t threshold = 0;
+
+
+    for (iX = signal.begin(); iX + interval < signal.end(); iX = iX + interval) 
     {
-      if(abs(signal[i]) > maximum) maximum = abs(signal[i]);
+      maximum = 0;
+
+      for(int32_t i = 0; i < interval; i++)
+      {
+        if(abs(*(iX+i)) > maximum) maximum = abs(*(iX+i));
+      }
+
+      threshold = maximum * 0.25;
+      //cout<<maximum<<"\n";
+      for(int32_t k = 0; k < interval; k++)
+      {
+        if( *(iX+k) >= (threshold)) ;//*(iX+k) -= threshold;
+        else if(*(iX+k) <= (-threshold)) ; // *(iX+k) += threshold;
+        else 
+        {
+          *(iX+k) = 0;
+          //cout<<"ZEROOO\n";
+        }
+      }
+
     }
-
-    float_t threshold = maximum * 0.3;
-
-    for(int32_t k = 0; k<signal.size();++k)
-    {
-      if(signal[k] >= (threshold)) signal[k] -= threshold;
-      else if(signal[k] <= (-threshold)) signal[k] += threshold;
-      else signal[k] = 0;
+    if(iX < signal.end()){
+      int missing = signal.end() - iX;
+      for(int32_t k = 0; k < missing; k++)
+      {
+      if( *(iX+k) >= (threshold)) ;//*(iX+k) -= threshold;
+      else if(*(iX+k) <= (-threshold)) ; // *(iX+k) += threshold;
+      else 
+      {
+        *(iX+k) = 0;
+        //cout<<"ZEROOO\n";
+      }
+      }
     }
-    
-
   }
-
 }

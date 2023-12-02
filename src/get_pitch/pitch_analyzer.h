@@ -6,6 +6,11 @@
 #include <vector>
 #include <algorithm>
 #include <complex>
+#include "FFTReal.h"
+
+#define MAX_FRAME 2048
+
+using namespace ffft;
 
 namespace upc {
   const float MIN_F0 = 50.0F;    ///< Minimum value of pitch in Hertzs
@@ -18,25 +23,25 @@ namespace upc {
 
   class ButterWorthFilter {
   private:
-    int32_t order;
-    double_t cutoffFrequency;
-    double_t samplingFrequency;
-    double_t gain;
-    std::vector<std::complex<double>> poles;
+
+    int samples;
+    
 
   public: 
-    ButterWorthFilter(int32_t order, double_t cutoffFrequency, double_t samplingFrequency);
 
-  
+    ButterWorthFilter(int N){
+      samples = N;
+    }
+
   ///
   /// Applies the ButterWorthFilter
   ///
-    void applyFilter(std::vector<float> &spectrum);
+    void applyFilter(float spectrum [], const float filter[]);
 
   ///
   /// Returns the signal center clipped
   ///
-    void center_clipping(std::vector<float> &signal) const;
+    void center_clipping(std::vector<float> &signal, int rate) const;
 
   };
 
@@ -55,7 +60,10 @@ namespace upc {
     unsigned int frameLen, ///< length of frame (in samples). Has to be set in the constructor call
       samplingFreq, ///< sampling rate (in samples per second). Has to be set in the constructor call
       npitch_min, ///< minimum value of pitch period, in samples
-      npitch_max; ///< maximum value of pitch period, in samples
+      npitch_max, 
+      size_fft; ///< maximum value of pitch period, in samples
+    int fft_frame = MAX_FRAME;
+
  
 	///
 	/// Computes correlation from lag=0 to r.size()
@@ -65,7 +73,7 @@ namespace upc {
   ///
   /// Computes the average maximum distance from lag=1 to MAX_F0 or npitch_max
   ///
-    void amdf(const std::vector<float> &x, std::vector<float> &distance) const;
+    unsigned int amdf(const std::vector<float> &x, std::vector<float> &distance) const;
 
   ///
   /// Computes the fft of the signal
@@ -76,23 +84,23 @@ namespace upc {
   ///
   /// Computes the cepstrum of the signal
   ///
-    void calcularCepstrum(const std::vector<float> &signal, std::vector<float> &cepstrum) const;
+    void calcularCepstrum(const std::vector<float> &signal, std::vector<float> &cepstrum, int size_fft, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const;
 
   ///
   /// Computes the crossing rate of the signal
   ///
-    std::float_t compute_zcr(const std::vector<float> &x) const;
+    int compute_zcr(const std::vector<float> &x) const;
 
 
 	///
 	/// Returns the pitch (in Hz) of input frame x
 	///
-    float compute_pitch(std::vector<float> & x) const;
+    float compute_pitch(std::vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const;
 	
 	///
 	/// Returns true is the frame is unvoiced
 	///
-    bool unvoiced(float pot, float r1norm, float rmaxnorm) const;
+    bool unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int min, float zcr) const;
 
 
   public:
@@ -102,7 +110,7 @@ namespace upc {
 					float min_F0 = MIN_F0,		///< Pitch range should be restricted to be above this value
 					float max_F0 = MAX_F0		///< Pitch range should be restricted to be below this value
 				 )
-	{
+	  {
       frameLen = fLen;
       samplingFreq = sFreq;
       set_f0_range(min_F0, max_F0);
@@ -112,38 +120,38 @@ namespace upc {
 	///
     /// Operator (): computes the pitch for the given vector x
 	///
-    float operator()(const std::vector<float> & _x) const {
+    float operator()(const std::vector<float> & _x, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
       if (_x.size() != frameLen)
         return -1.0F;
 
       std::vector<float> x(_x); //local copy of input frame
-      return compute_pitch(x);
+      return compute_pitch(x, fft_first, fft_second);
     }
 
 	///
     /// Operator (): computes the pitch for the given "C" vector (float *).
     /// N is the size of the vector pointer by pt.
 	///
-    float operator()(const float * pt, unsigned int N) const {
+    float operator()(const float * pt, unsigned int N, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
       if (N != frameLen)
         return -1.0F;
 
       std::vector<float> x(N); //local copy of input frame, size N
       std::copy(pt, pt+N, x.begin()); ///copy input values into local vector x
-      return compute_pitch(x);
+      return compute_pitch(x, fft_first, fft_second);
     }
 
 	///
     /// Operator (): computes the pitch for the given vector, expressed by the begin and end iterators
 	///
-    float operator()(std::vector<float>::const_iterator begin, std::vector<float>::const_iterator end) const {
+    float operator()(std::vector<float>::const_iterator begin, std::vector<float>::const_iterator end, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
 
       if (end-begin != frameLen)
         return -1.0F;
 
       std::vector<float> x(end-begin); //local copy of input frame, size N
       std::copy(begin, end, x.begin()); //copy input values into local vector x
-      return compute_pitch(x);
+      return compute_pitch(x, fft_first,fft_second);
     }
     
 	///
