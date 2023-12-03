@@ -61,11 +61,14 @@ namespace upc {
 
     fft_second.do_fft(out_cepstrum,log_fourier);
 
+    fft_second.rescale(out_cepstrum);
+
     for(int i = 0; i<(size_fft/4); i++)
     {
       cepstrum[i] = pow(out_cepstrum[i],2) + pow(out_cepstrum[i+size_fft/4],2);
-      cout<<cepstrum[i]<<"\n";
+      // cout<<cepstrum[i]<<"\n";
     }
+    // std::cout<<"End Of Frame\n";
 
   }
 
@@ -77,7 +80,7 @@ namespace upc {
 
     for(uint64_t i = 1; i < x.size(); i++)
     {
-        if(signbit(x[i]*x[i-1]))
+        if( x[i] < 1e-15)
         {
           count++;
         }
@@ -89,10 +92,8 @@ namespace upc {
   unsigned int PitchAnalyzer::amdf(const vector<float> &x, vector<float> &distance) const{
       
       float_t minIndex = 1000;
-      float_t mean = 0;
       unsigned int index = 0;
-      //std::cout<<x.size()<<"\n";
-      for (unsigned int lag = npitch_min-10; lag <= distance.size() ;lag++)
+      for (unsigned int lag = npitch_min; lag <= distance.size() ;lag++)
       {
           distance[lag] = 0;
 
@@ -100,13 +101,11 @@ namespace upc {
         {
           distance[lag] += abs(x[n]-x[n+lag]);
         }
-        distance[lag] = distance[lag]/(x.size()-lag);
+        distance[lag] = distance[lag]/(x.size());
 
-        if(lag<x.size()/2) mean+=distance[lag];
         // std::cout<<lag<<" \t";
         // std::cout<<distance[lag]<<"\n";
 
-        if(lag<x.size()/2) ;
         if(minIndex>distance[lag]) 
         {
           minIndex = distance[lag];
@@ -116,7 +115,6 @@ namespace upc {
       }
       if(minIndex < 1.5e-4) index = 0; 
 
-      // std::cout<<mean<<"\t";
       // std::cout<<minIndex<<" \t";
       // std::cout<<index<<" \n";
       // std::cout<<"End Of Frame\n";
@@ -156,7 +154,14 @@ namespace upc {
       npitch_max = frameLen/2;
   }
 
-  bool PitchAnalyzer::unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int min, float zcr) const {
+  void PitchAnalyzer::set_min(unsigned int min)
+  {
+    previous_min = min;
+    //cout<<"NEXT MIN"<<(previous_min)<<"\n";
+
+  }
+
+  bool PitchAnalyzer::unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int *min, float zeros, float c0, unsigned int frame) {
     /// \TODO Implement a rule to decide whether the sound is voiced or not.
     /// * You can use the standard features (pot, r1norm, rmaxnorm),
     ///   or compute and use other ones.
@@ -164,17 +169,38 @@ namespace upc {
     // {
     //   return true;
     // } 
-
-    if(((min>=npitch_min) && (min<=npitch_max)) && zcr < 60)
+    // cout<<r1norm<<"\n";
+    // cout<<rmaxnorm<<"\n";
+    // cout<<rmaxnorm/r1norm<<"\n";
+    // cout<<zcr<<"\n";
+    // cout<<"END OF FRAME\n";
+    if(frame == 1) set_min((unsigned int)0);
+    if(((*min>=npitch_min) && (*min<=npitch_max)))
     {
 
-      return false;
+
+      if(((r1norm>0.92F)&&(c0<65)) || ((r1norm >0.6F)&&(pot> -40)&&(rmaxnorm/r1norm>0.35F)&&(zeros<(frameLen*0.95)))) {
+        
+        if(frame>(frameLen*0.2)){
+        if(((*min/previous_min)<0.6)||((*min/previous_min)>1.4)) *min = previous_min;
+         cout<<"NEXT MIN"<<(previous_min)<<"\n";
+
+        }
+        unsigned int new_min = (unsigned int)(std::round(1.0/4 * (*min) + 3.0/4*(previous_min)));
+        //cout<<"NEXT MIN"<<(new_min)<<"\n";
+        set_min(new_min);
+
+        return false;
+      } 
+      
+      // else return true;
+      else return true;
     }
 
     else return true;
   }
 
-  float PitchAnalyzer::compute_pitch(vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
+  float PitchAnalyzer::compute_pitch(vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second, unsigned int frame) {
     if (x.size() != frameLen)
       return -1.0F;
   int size_fft = 0;
@@ -188,14 +214,12 @@ namespace upc {
     vector<float> r(npitch_max);
     vector<float> distance(npitch_max);
     vector<float> c(size_fft/4);
-    
     //Compute correlation
     int zcr = compute_zcr(x);
 
     autocorrelation(x, r);
     calcularCepstrum(x, c, size_fft, fft_first, fft_second);
     unsigned int min = amdf(x,distance);
-
     vector<float>::const_iterator iR = r.begin(), iRMax = iR;
     
     for(iR = iRMax = r.begin() + npitch_min; iR< r.begin() + npitch_max; iR++)
@@ -209,6 +233,14 @@ namespace upc {
 
     unsigned int lag = iRMax - r.begin();
 
+    if((lag<min)&&(lag > 50)) min = lag;
+    
+    cout<<"NEXT MIN"<<(float)samplingFreq/(float)min<<"\n";
+
+    
+
+    // cout<<min<<"\n";
+    // cout<<"FRAME NEW"<<frame<<"\n";
     /// \TODO 
 	/// Find the lag of the maximum value of the autocorrelation away from the origin.<br>
 	/// Choices to set the minimum value of the lag are:
@@ -219,7 +251,7 @@ namespace upc {
 
     // cout<<npitch_max<<"\n";
     // cout<<npitch_min<<"\n";
-    float pot = 10 * log10(1e-8*r[0]);
+    float pot = 10 * log10(1e-8 + r[0]);
     //You can print these (and other) features, look at them using wavesurfer
     //Based on that, implement a rule for unvoiced
     //change to #if 1 and compile
@@ -228,10 +260,10 @@ namespace upc {
       cout << pot << '\t' << r[1]/r[0] << '\t' << r[lag]/r[0] << endl;
 #endif 
     
-    if (unvoiced(pot, r[1]/r[0], r[lag]/r[0], min, zcr))
+    if (unvoiced(pot, r[1]/r[0], r[lag]/r[0], &min, zcr, c[0], frame))
       return 0;
     else
-      return (float) samplingFreq/(float) min;
+      return (float) samplingFreq/(float) lag;
   }
 
 
@@ -248,7 +280,7 @@ namespace upc {
 
   void ButterWorthFilter::center_clipping(std::vector<float> &signal, int rate) const
   {
-    float_t interval = rate/20;
+    float_t interval = rate/10;
     vector<float>::iterator iX;
     float_t maximum = 0;
     float_t threshold = 0;
@@ -263,7 +295,7 @@ namespace upc {
         if(abs(*(iX+i)) > maximum) maximum = abs(*(iX+i));
       }
 
-      threshold = maximum * 0.25;
+      threshold = maximum * 0.2;
       //cout<<maximum<<"\n";
       for(int32_t k = 0; k < interval; k++)
       {
@@ -291,4 +323,6 @@ namespace upc {
       }
     }
   }
+
+
 }

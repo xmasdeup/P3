@@ -72,7 +72,7 @@ int main(int argc, const char *argv[]) {
 
 
   // Define analyzer
-  PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 100, 550);
+  PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 50, 500);
   ButterWorthFilter butter(DFTsamples/2);
   FFTReal <float> fft_caller(DFTsamples);
 
@@ -143,8 +143,10 @@ int main(int argc, const char *argv[]) {
   // Iterate for each frame and save values in f0 vector
   vector<float>::iterator iX;
   vector<float> f0;
+  unsigned int frame = 0;
   for (iX = x.begin(); iX + n_len < x.end(); iX = iX + n_shift) {
-    float f = analyzer(iX, iX + n_len, fft_first, fft_second);
+    frame++;
+    float f = analyzer(iX, iX + n_len, fft_first, fft_second, frame);
     f0.push_back(f);
   }
 

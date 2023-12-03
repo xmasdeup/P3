@@ -50,8 +50,9 @@ namespace upc {
 	/// Wndow type
     enum Window {
 		RECT, 						///< Rectangular window
-		HAMMING						///< Hamming window
-	};
+		HAMMING				///< Hamming window
+
+  };
 
     void set_window(Window type); ///< pre-compute window
 
@@ -61,7 +62,10 @@ namespace upc {
       samplingFreq, ///< sampling rate (in samples per second). Has to be set in the constructor call
       npitch_min, ///< minimum value of pitch period, in samples
       npitch_max, 
-      size_fft; ///< maximum value of pitch period, in samples
+      size_fft; ///< maximum value of pitch period, in samples;
+    unsigned int previous_min;
+    std::vector<float> pitch;
+
     int fft_frame = MAX_FRAME;
 
  
@@ -95,13 +99,17 @@ namespace upc {
 	///
 	/// Returns the pitch (in Hz) of input frame x
 	///
-    float compute_pitch(std::vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const;
+    float compute_pitch(std::vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second, unsigned int frame) ;
 	
 	///
 	/// Returns true is the frame is unvoiced
 	///
-    bool unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int min, float zcr) const;
-
+    bool unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int *min, float zeros, float c0, unsigned int frame) ;
+  
+  ///
+  /// Sets minimum
+  ///
+    void set_min(unsigned int min);
 
   public:
     PitchAnalyzer(	unsigned int fLen,			///< Frame length in samples
@@ -115,43 +123,44 @@ namespace upc {
       samplingFreq = sFreq;
       set_f0_range(min_F0, max_F0);
       set_window(w);
+      pitch.resize(3);
     }
 
 	///
     /// Operator (): computes the pitch for the given vector x
 	///
-    float operator()(const std::vector<float> & _x, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
+    float operator()(const std::vector<float> & _x, FFTReal <float> &fft_first, FFTReal <float> &fft_second, unsigned int frame) {
       if (_x.size() != frameLen)
         return -1.0F;
 
       std::vector<float> x(_x); //local copy of input frame
-      return compute_pitch(x, fft_first, fft_second);
+      return compute_pitch(x, fft_first, fft_second, frame);
     }
 
 	///
     /// Operator (): computes the pitch for the given "C" vector (float *).
     /// N is the size of the vector pointer by pt.
 	///
-    float operator()(const float * pt, unsigned int N, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
+    float operator()(const float * pt, unsigned int N, FFTReal <float> &fft_first, FFTReal <float> &fft_second, unsigned int frame) {
       if (N != frameLen)
         return -1.0F;
 
       std::vector<float> x(N); //local copy of input frame, size N
       std::copy(pt, pt+N, x.begin()); ///copy input values into local vector x
-      return compute_pitch(x, fft_first, fft_second);
+      return compute_pitch(x, fft_first, fft_second, frame);
     }
 
 	///
     /// Operator (): computes the pitch for the given vector, expressed by the begin and end iterators
 	///
-    float operator()(std::vector<float>::const_iterator begin, std::vector<float>::const_iterator end, FFTReal <float> &fft_first, FFTReal <float> &fft_second) const {
+    float operator()(std::vector<float>::const_iterator begin, std::vector<float>::const_iterator end, FFTReal <float> &fft_first, FFTReal <float> &fft_second, unsigned int frame) {
 
       if (end-begin != frameLen)
         return -1.0F;
 
       std::vector<float> x(end-begin); //local copy of input frame, size N
       std::copy(begin, end, x.begin()); //copy input values into local vector x
-      return compute_pitch(x, fft_first,fft_second);
+      return compute_pitch(x, fft_first,fft_second, frame);
     }
     
 	///
