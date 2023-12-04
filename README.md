@@ -37,7 +37,7 @@ Ejercicios básicos
      unos 30 ms de un fonema sonoro y su periodo de pitch; y, en otro *subplot*, se vea con claridad la
 	 autocorrelación de la señal y la posición del primer máximo secundario.
 
-      - Hay un error con python y WSL y no deja hacer el plot. El código esta en graphs.py 
+      - **Hay un error con python y WSL y no deja hacer el plot. El código esta en graphs.py** 
 
 	 NOTA: es más que probable que tenga que usar Python, Octave/MATLAB u otro programa semejante para
 	 hacerlo. Se valorará la utilización de la biblioteca matplotlib de Python.
