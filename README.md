@@ -37,6 +37,8 @@ Ejercicios básicos
      unos 30 ms de un fonema sonoro y su periodo de pitch; y, en otro *subplot*, se vea con claridad la
 	 autocorrelación de la señal y la posición del primer máximo secundario.
 
+      - Hay un error con python y WSL y no deja hacer el plot. El código esta en graphs.py 
+
 	 NOTA: es más que probable que tenga que usar Python, Octave/MATLAB u otro programa semejante para
 	 hacerlo. Se valorará la utilización de la biblioteca matplotlib de Python.
 
@@ -87,6 +89,14 @@ Ejercicios básicos
 
    * Implemente la regla de decisión sonoro o sordo e inserte el código correspondiente.
 
+          if(((*min>=npitch_min) && (*min<=npitch_max)))
+          {
+
+          if(((r1norm>0.92F)&&(c0<55)) || ((r1norm >0.6F)&&(pot> -55)&&(rmaxnorm/r1norm>0.49F)&&(zeros<(frameLen*0.95)))) {
+
+          return false;
+          } 
+
    * Puede serle útil seguir las instrucciones contenidas en el documento adjunto `código.pdf`.
 
 - Una vez completados los puntos anteriores, dispondrá de una primera versión del estimador de pitch. El 
@@ -109,12 +119,19 @@ Ejercicios básicos
 	    su resultado con el obtenido por la mejor versión de su propio sistema.  Inserte una gráfica
 		ilustrativa del resultado de ambos estimadores.
      
+    ![Alt text](https://github.com/xmasdeup/P3/blob/Masdeu-Alsina/comparison.png?raw=true)
+
+    - **Python no funciona y wavesurfer casi que tampoco, esto es lo mejor que se pudo sacar**
+    **El resultado de wavesurfer es posterior a la modificación de los parámetros y ni así funcionaba**
+
 		Aunque puede usar el propio Wavesurfer para obtener la representación, se valorará
 	 	el uso de alternativas de mayor calidad (particularmente Python).
   
   * Optimice los parámetros de su sistema de estimación de pitch e inserte una tabla con las tasas de error
     y el *score* TOTAL proporcionados por `pitch_evaluate` en la evaluación de la base de datos 
 	`pitch_db/train`..
+
+  ![Alt text](https://github.com/xmasdeup/P3/blob/Masdeu-Alsina/result.png?raw=true)
 
 Ejercicios de ampliación
 ------------------------
@@ -137,7 +154,14 @@ Ejercicios de ampliación
   * Técnicas de preprocesado: filtrado paso bajo, diezmado, *center clipping*, etc.
 
     - Filtrado paso bajo:
+            
+          for(int i = 1; i < DFTsamples/2; i++){
 
+            float_t freq = i * f_inc;
+            double denum = 1 + 0.31*pow(freq/cutoffFrequency, 2*order);
+            filter[i] = 1.0/sqrt(denum);
+          }
+          
           void ButterWorthFilter::applyFilter(float spectrum [], const float filter [])
           {
 
@@ -311,7 +335,25 @@ Ejercicios de ampliación
 
   * Optimización **demostrable** de los parámetros que gobiernan el estimador, en concreto, de los que
     gobiernan la decisión sonoro/sordo.
+    - Decision sonoro/sordo:  
+       
+          if(((*min>=npitch_min) && (*min<=npitch_max)))
+          {
+
+          if(((r1norm>0.92F)&&(c0<55)) || ((r1norm >0.6F)&&(pot> -55)&&(rmaxnorm/r1norm>0.49F)&&(zeros<(frameLen*0.95)))) {
+
+          return false;
+          } 
+
+      - **Min:** contiene el valor de la posicion del pitch, por lo tanto mientras el valor se haye en medio será correcta la estimación.
+      - **R1norm:** contiene la correlación en 1 muestra de desplazamiento. Incluso después de realizarse clipping esta continua siendo muy grande, pues entonces se puede usar como parámetro.
+      - **C0:** contiene el valor del cepstrum en 0. Cuando este es muy grande, significa que hay muchos ceros en la trama, implicando asi una gran posibilidad de sordo.
+      - **Zeros:** contiene el número de ceros de la trama, la mayoría de los silencios tiene un 95% de 0 en toda la trama.
+
+
   * Cualquier otra técnica que se le pueda ocurrir o encuentre en la literatura.
+
+
 
   Encontrará más información acerca de estas técnicas en las [Transparencias del Curso](https://atenea.upc.edu/pluginfile.php/2908770/mod_resource/content/3/2b_PS%20Techniques.pdf)
   y en [Spoken Language Processing](https://discovery.upc.edu/iii/encore/record/C__Rb1233593?lang=cat).

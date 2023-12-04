@@ -64,7 +64,6 @@ namespace upc {
       npitch_max, 
       size_fft; ///< maximum value of pitch period, in samples;
     unsigned int previous_min;
-    std::vector<float> pitch;
 
     int fft_frame = MAX_FRAME;
 
@@ -123,7 +122,6 @@ namespace upc {
       samplingFreq = sFreq;
       set_f0_range(min_F0, max_F0);
       set_window(w);
-      pitch.resize(3);
     }
 
 	///

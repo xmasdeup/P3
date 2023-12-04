@@ -101,7 +101,7 @@ namespace upc {
         {
           distance[lag] += abs(x[n]-x[n+lag]);
         }
-        distance[lag] = distance[lag]/(x.size());
+        distance[lag] = distance[lag]/(x.size()-lag+npitch_min);
 
         // std::cout<<lag<<" \t";
         // std::cout<<distance[lag]<<"\n";
@@ -162,42 +162,16 @@ namespace upc {
   }
 
   bool PitchAnalyzer::unvoiced(float pot, float r1norm, float rmaxnorm, unsigned int *min, float zeros, float c0, unsigned int frame) {
-    /// \TODO Implement a rule to decide whether the sound is voiced or not.
-    /// * You can use the standard features (pot, r1norm, rmaxnorm),
-    ///   or compute and use other ones.
-    // if((pot< -40) || (rmaxnorm/r1norm < 0.35))
-    // {
-    //   return true;
-    // } 
-    // cout<<r1norm<<"\n";
-    // cout<<rmaxnorm<<"\n";
-    // cout<<rmaxnorm/r1norm<<"\n";
-    // cout<<zcr<<"\n";
-    // cout<<"END OF FRAME\n";
-    if(frame == 1) set_min((unsigned int)0);
+
     if(((*min>=npitch_min) && (*min<=npitch_max)))
     {
 
-
-      if(((r1norm>0.92F)&&(c0<65)) || ((r1norm >0.6F)&&(pot> -40)&&(rmaxnorm/r1norm>0.35F)&&(zeros<(frameLen*0.95)))) {
-        
-        if(frame>(frameLen*0.2)){
-        if(((*min/previous_min)<0.6)||((*min/previous_min)>1.4)) *min = previous_min;
-         cout<<"NEXT MIN"<<(previous_min)<<"\n";
-
-        }
-        unsigned int new_min = (unsigned int)(std::round(1.0/4 * (*min) + 3.0/4*(previous_min)));
-        //cout<<"NEXT MIN"<<(new_min)<<"\n";
-        set_min(new_min);
+      if(((r1norm>0.92F)&&(c0<55)) || ((r1norm >0.6F)&&(pot> -55)&&(rmaxnorm/r1norm>0.49F)&&(zeros<(frameLen*0.95)))) {
 
         return false;
       } 
-      
-      // else return true;
-      else return true;
     }
-
-    else return true;
+    return true;
   }
 
   float PitchAnalyzer::compute_pitch(vector<float> & x, FFTReal <float> &fft_first, FFTReal <float> &fft_second, unsigned int frame) {
@@ -214,6 +188,7 @@ namespace upc {
     vector<float> r(npitch_max);
     vector<float> distance(npitch_max);
     vector<float> c(size_fft/4);
+
     //Compute correlation
     int zcr = compute_zcr(x);
 
@@ -233,28 +208,16 @@ namespace upc {
 
     unsigned int lag = iRMax - r.begin();
 
-    if((lag<min)&&(lag > 50)) min = lag;
+    int temp = lag-min;
+    cout<<temp<<"\n";
+    if(abs(temp)<3) min = (unsigned int)(lag+min)/2;
+    else if (temp<0) min = lag;
+    else if (temp>0) ;
+    else min = lag;
     
-    cout<<"NEXT MIN"<<(float)samplingFreq/(float)min<<"\n";
 
-    
-
-    // cout<<min<<"\n";
-    // cout<<"FRAME NEW"<<frame<<"\n";
-    /// \TODO 
-	/// Find the lag of the maximum value of the autocorrelation away from the origin.<br>
-	/// Choices to set the minimum value of the lag are:
-	///    - The first negative value of the autocorrelation.
-	///    - The lag corresponding to the maximum value of the pitch.
-  ///	   .
-	/// In either case, the lag should not exceed that of the minimum value of the pitch.
-
-    // cout<<npitch_max<<"\n";
-    // cout<<npitch_min<<"\n";
     float pot = 10 * log10(1e-8 + r[0]);
-    //You can print these (and other) features, look at them using wavesurfer
-    //Based on that, implement a rule for unvoiced
-    //change to #if 1 and compile
+
 #if 0
     if (r[0] > 0.0F)
       cout << pot << '\t' << r[1]/r[0] << '\t' << r[lag]/r[0] << endl;
@@ -263,7 +226,7 @@ namespace upc {
     if (unvoiced(pot, r[1]/r[0], r[lag]/r[0], &min, zcr, c[0], frame))
       return 0;
     else
-      return (float) samplingFreq/(float) lag;
+      return (float) samplingFreq/(float) min;
   }
 
 
